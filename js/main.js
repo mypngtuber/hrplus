@@ -18,6 +18,14 @@ function initNavigation() {
       SearchModule.renderSourceChips(document.getElementById('source-chips'));
     }
     if (view === 'settings' && typeof ApiManager !== 'undefined') ApiManager.render();
+    // صفحة قاعدة الشركات: تحميل من قاعدة البيانات
+    if (view === 'companies' && typeof CompanyModule !== 'undefined') {
+      CompanyModule.loadDbPage().catch(() => {});
+    }
+    // لوحة التحكم: تحديث الإحصائيات والرسوم البيانية
+    if (view === 'dashboard' && typeof DashboardModule !== 'undefined') {
+      DashboardModule.refresh().catch(() => {});
+    }
   }
 
   buttons.forEach(btn => btn.addEventListener('click', () => goTo(btn.dataset.view)));
@@ -49,4 +57,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   BulkModule.init();
   TrackerModule.init();
   TemplatesModule.init();
+  // وحدات المرحلة الثالثة
+  if (typeof CompanyModule !== 'undefined') CompanyModule.init();
+  if (typeof DashboardModule !== 'undefined') {
+    DashboardModule.init();
+    DashboardModule.refresh().catch(() => {});
+  }
+  if (typeof AgentModule !== 'undefined') AgentModule.init();
 });

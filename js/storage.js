@@ -88,9 +88,8 @@ const DEFAULT_SETTINGS = {
   model: 'gemini-2.5-flash',
   // بحث الوظائف
   rapidApiKey: '',
-  // Google Custom Search (LinkedIn / Wuzzuf / Google)
-  googleApiKey: '',
-  googleCx: '',
+  // Serper Web Search (بديل Google Custom Search بالكامل)
+  serperKey: '',
   // الإيميلات المُتحقَّق منها
   hunterKey: '',
   // الإرسال المباشر (EmailJS)

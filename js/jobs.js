@@ -12,7 +12,7 @@ const JobsModule = (() => {
 
     if (!query && !AppState.cvProfile) return toast('أدخل المسمى الوظيفي أو فعّل نسخة CV محفوظة', 'error');
 
-    const hasKeys = AppState.settings.rapidApiKey || (AppState.settings.googleApiKey && AppState.settings.googleCx);
+    const hasKeys = AppState.settings.serperKey || AppState.settings.rapidApiKey;
     if (!hasKeys) {
       SearchModule.renderFallback(container, query, city);
       return;
@@ -28,7 +28,7 @@ const JobsModule = (() => {
       }
       const listDiv = document.createElement('div');
       container.appendChild(listDiv);
-      SearchModule.renderJobs(listDiv, jobs);
+      BulkModule.renderJobCards(listDiv, jobs, { showMatch: true });
       if (jobs.length) toast(`تم العثور على ${jobs.length} نتيجة في مصر`, 'success');
     } catch (err) {
       toast(err.message, 'error');

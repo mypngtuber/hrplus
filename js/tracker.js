@@ -1,23 +1,31 @@
 /* =====================================================================
- * tracker.js — لوحة تتبع التقديمات (Kanban / Table) + مكتبة النماذج
- * يعتمد على RESTful Table API المدمج
+ * tracker.js — لوحة تتبع التقديمات (Kanban 7 مراحل / جدول) + متابعات ذكية
+ *              + مكتبة النماذج — يعتمد على RESTful Table API المدمج
+ * المراحل: Found → Interested → Applied → Contacted → Interview → Offer → Rejected
+ * (الحالات القديمة sent/pending/accepted تُعيَّن تلقائياً للأقرب)
  * ===================================================================== */
 const TrackerModule = (() => {
   const TABLE = 'applications';
+
   const STATUS = {
-    sent: { label: 'مُرسل', icon: 'fa-paper-plane', cls: 'sent' },
+    found: { label: 'مُكتشفة', icon: 'fa-magnifying-glass', cls: 'found' },
+    interested: { label: 'مهتم', icon: 'fa-star', cls: 'interested' },
+    applied: { label: 'تم التقديم', icon: 'fa-paper-plane', cls: 'applied' },
+    contacted: { label: 'تم التواصل', icon: 'fa-comments', cls: 'contacted' },
     interview: { label: 'مقابلة', icon: 'fa-handshake', cls: 'interview' },
-    pending: { label: 'معلق', icon: 'fa-clock', cls: 'pending' },
-    accepted: { label: 'مقبول', icon: 'fa-circle-check', cls: 'accepted' },
+    offer: { label: 'عرض عمل', icon: 'fa-trophy', cls: 'offer' },
     rejected: { label: 'مرفوض', icon: 'fa-circle-xmark', cls: 'rejected' }
   };
+  // تعيين الحالات القديمة (توافقية عكسية)
+  const LEGACY_MAP = { sent: 'applied', pending: 'interested', accepted: 'offer' };
+  const normStatus = s => LEGACY_MAP[s] || (STATUS[s] ? s : 'applied');
 
   /* ---------- CRUD ---------- */
   async function fetchAll() {
-    const res = await fetch(`tables/${TABLE}?limit=200&sort=-created_at`);
+    const res = await fetch(`tables/${TABLE}?limit=300&sort=-created_at`);
     if (!res.ok) throw new Error('تعذر تحميل الطلبات');
     const data = await res.json();
-    AppState.applications = data.data || [];
+    AppState.applications = (data.data || []).filter(r => !r.deleted);
     return AppState.applications;
   }
 
@@ -35,11 +43,10 @@ const TrackerModule = (() => {
   }
 
   async function update(id, fields) {
-    const current = AppState.applications.find(a => a.id === id);
     const res = await fetch(`tables/${TABLE}/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...current, ...fields })
+      body: JSON.stringify(fields)
     });
     if (!res.ok) throw new Error('فشل تحديث الطلب');
     const record = await res.json();
@@ -56,25 +63,46 @@ const TrackerModule = (() => {
     render();
   }
 
-  /* ---------- العرض ---------- */
-  function updateStats() {
-    const apps = AppState.applications;
-    document.getElementById('stat-total').textContent = apps.length;
-    document.getElementById('stat-interviews').textContent = apps.filter(a => a.status === 'interview').length;
-    document.getElementById('stat-pending').textContent = apps.filter(a => a.status === 'pending' || a.status === 'sent').length;
-    document.getElementById('stat-accepted').textContent = apps.filter(a => a.status === 'accepted').length;
+  /* ---------- المتابعات المستحقة (Smart Follow-up) ---------- */
+  function dueFollowups() {
+    const today = new Date().toISOString().slice(0, 10);
+    return AppState.applications.filter(a => {
+      const st = normStatus(a.status);
+      return a.followup_date && a.followup_date <= today && ['applied', 'contacted'].includes(st);
+    });
   }
 
+  /* ---------- الإحصائيات السريعة ---------- */
+  function updateStats() {
+    const apps = AppState.applications;
+    const el = id => document.getElementById(id);
+    if (!el('stat-total')) return;
+    el('stat-total').textContent = apps.length;
+    el('stat-interviews').textContent = apps.filter(a => normStatus(a.status) === 'interview').length;
+    el('stat-pending').textContent = apps.filter(a => ['applied', 'contacted'].includes(normStatus(a.status))).length;
+    el('stat-accepted').textContent = apps.filter(a => normStatus(a.status) === 'offer').length;
+  }
+
+  /* ---------- العرض ---------- */
   function render() {
     updateStats();
     renderKanban();
     renderTable();
   }
 
+  function followupBadge(a) {
+    if (!a.followup_date) return '';
+    const today = new Date().toISOString().slice(0, 10);
+    const due = a.followup_date <= today;
+    return `<span class="mini-badge" style="background:${due ? '#fee2e2' : '#fef3c7'};color:${due ? '#b91c1c' : '#b45309'}">
+      <i class="fa-solid fa-reply"></i> متابعة ${due ? 'مستحقة' : ''}: ${escapeHtml(a.followup_date)}</span>`;
+  }
+
   function renderKanban() {
     const board = document.getElementById('kanban-board');
+    if (!board) return;
     board.innerHTML = Object.entries(STATUS).map(([key, s]) => {
-      const cards = AppState.applications.filter(a => (a.status || 'sent') === key);
+      const cards = AppState.applications.filter(a => normStatus(a.status) === key);
       return `
         <div class="kanban-col" data-status="${key}">
           <div class="kanban-col-header">
@@ -82,12 +110,15 @@ const TrackerModule = (() => {
             <span class="kanban-count">${cards.length}</span>
           </div>
           ${cards.map(a => `
-            <div class="kanban-card status-${key}" draggable="true" data-id="${a.id}">
+            <div class="kanban-card status-${s.cls}" draggable="true" data-id="${a.id}">
               <strong>${escapeHtml(a.company)}</strong>
               <span class="job-title">${escapeHtml(a.job_title)}</span>
-              <div class="card-date"><i class="fa-solid fa-calendar-day"></i> ${escapeHtml(a.applied_date || '')}</div>
+              <div class="card-date"><i class="fa-solid fa-calendar-day"></i> ${escapeHtml(a.applied_date || '')}
+                ${a.cv_id ? ' · <i class="fa-solid fa-file-lines"></i>' : ''}</div>
+              ${followupBadge(a)}
               <div class="card-actions">
                 ${a.job_url ? `<a class="icon-btn" href="${escapeHtml(a.job_url)}" target="_blank" rel="noopener" title="رابط الوظيفة"><i class="fa-solid fa-link"></i></a>` : ''}
+                ${['applied', 'contacted'].includes(key) ? `<button class="icon-btn btn-followup" data-id="${a.id}" title="توليد متابعة بالـ AI" style="color:var(--warning)"><i class="fa-solid fa-reply"></i></button>` : ''}
                 <button class="icon-btn btn-edit" data-id="${a.id}" title="تعديل"><i class="fa-solid fa-pen"></i></button>
                 <button class="icon-btn btn-del" data-id="${a.id}" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -100,14 +131,17 @@ const TrackerModule = (() => {
 
   function renderTable() {
     const tbody = document.getElementById('apps-tbody');
+    if (!tbody) return;
     tbody.innerHTML = AppState.applications.map(a => {
-      const s = STATUS[a.status] || STATUS.sent;
+      const st = normStatus(a.status);
+      const s = STATUS[st];
+      const cvName = AppState.savedCvs.find(c => c.id === a.cv_id)?.name || '';
       return `<tr>
-        <td><strong>${escapeHtml(a.company)}</strong></td>
-        <td>${escapeHtml(a.job_title)}</td>
+        <td><strong>${escapeHtml(a.company)}</strong>${a.source ? `<br><span class="src-line">${escapeHtml(a.source)}</span>` : ''}</td>
+        <td>${escapeHtml(a.job_title)}${cvName ? `<br><span class="src-line"><i class="fa-solid fa-file-lines"></i> ${escapeHtml(cvName)}</span>` : ''}</td>
         <td>${escapeHtml(a.location || '—')}</td>
         <td><span class="status-badge ${s.cls}">${s.label}</span></td>
-        <td>${escapeHtml(a.applied_date || '—')}</td>
+        <td>${escapeHtml(a.applied_date || '—')}${a.followup_date ? `<br>${followupBadge(a)}` : ''}</td>
         <td>
           ${a.job_url ? `<a class="icon-btn" href="${escapeHtml(a.job_url)}" target="_blank" rel="noopener" title="الرابط"><i class="fa-solid fa-link"></i></a>` : ''}
           <button class="icon-btn btn-edit" data-id="${a.id}" title="تعديل"><i class="fa-solid fa-pen"></i></button>
@@ -127,6 +161,8 @@ const TrackerModule = (() => {
         try { await remove(b.dataset.id); toast('تم الحذف', 'success'); }
         catch (err) { toast(err.message, 'error'); }
       }));
+    scope.querySelectorAll('.btn-followup').forEach(b =>
+      b.addEventListener('click', () => openFollowupModal(b.dataset.id)));
   }
 
   function bindDragDrop(board) {
@@ -141,7 +177,7 @@ const TrackerModule = (() => {
         e.preventDefault(); col.classList.remove('drag-over');
         const newStatus = col.dataset.status;
         const app = AppState.applications.find(a => a.id === draggedId);
-        if (app && app.status !== newStatus) {
+        if (app && normStatus(app.status) !== newStatus) {
           app.status = newStatus;
           render();
           try { await update(draggedId, { status: newStatus }); toast(`نُقل إلى "${STATUS[newStatus].label}"`, 'success'); }
@@ -151,7 +187,7 @@ const TrackerModule = (() => {
     });
   }
 
-  /* ---------- النافذة المنبثقة ---------- */
+  /* ---------- نافذة الطلب (حقول موسعة) ---------- */
   function openModal(editId = null, prefill = {}) {
     const modal = document.getElementById('app-modal');
     const app = editId ? AppState.applications.find(a => a.id === editId) : null;
@@ -160,10 +196,22 @@ const TrackerModule = (() => {
     document.getElementById('app-company').value = app?.company || prefill.company || '';
     document.getElementById('app-job-title').value = app?.job_title || prefill.job_title || '';
     document.getElementById('app-location').value = app?.location || prefill.location || '';
-    document.getElementById('app-status').value = app?.status || prefill.status || 'sent';
+    document.getElementById('app-status').value = normStatus(app?.status || prefill.status || 'applied');
     document.getElementById('app-job-url').value = app?.job_url || prefill.job_url || '';
     document.getElementById('app-contact-email').value = app?.contact_email || prefill.contact_email || '';
     document.getElementById('app-notes').value = app?.notes || '';
+    // الحقول الموسعة
+    const cvSel = document.getElementById('app-cv');
+    if (cvSel) {
+      cvSel.innerHTML = '<option value="">— بدون —</option>' + AppState.savedCvs.map(c =>
+        `<option value="${c.id}" ${c.id === (app?.cv_id || prefill.cv_id) ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+    }
+    const setVal = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = v || ''; };
+    setVal('app-source', app?.source || prefill.source || '');
+    setVal('app-followup', app?.followup_date || prefill.followup_date || '');
+    setVal('app-interview', app?.interview_date || prefill.interview_date || '');
+    const sentEl = document.getElementById('app-email-sent');
+    if (sentEl) sentEl.checked = !!(app?.email_sent ?? prefill.email_sent);
     modal.classList.remove('hidden');
   }
 
@@ -171,20 +219,114 @@ const TrackerModule = (() => {
 
   async function saveFromModal() {
     const id = document.getElementById('app-edit-id').value;
+    const getVal = elId => document.getElementById(elId)?.value.trim() || '';
     const fields = {
-      company: document.getElementById('app-company').value.trim(),
-      job_title: document.getElementById('app-job-title').value.trim(),
-      location: document.getElementById('app-location').value.trim(),
+      company: getVal('app-company'),
+      job_title: getVal('app-job-title'),
+      location: getVal('app-location'),
       status: document.getElementById('app-status').value,
-      job_url: document.getElementById('app-job-url').value.trim(),
-      contact_email: document.getElementById('app-contact-email').value.trim(),
-      notes: document.getElementById('app-notes').value.trim()
+      job_url: getVal('app-job-url'),
+      contact_email: getVal('app-contact-email'),
+      notes: getVal('app-notes'),
+      cv_id: document.getElementById('app-cv')?.value || '',
+      source: getVal('app-source'),
+      followup_date: getVal('app-followup'),
+      interview_date: getVal('app-interview'),
+      email_sent: !!document.getElementById('app-email-sent')?.checked
     };
     if (!fields.company || !fields.job_title) return toast('الشركة والمسمى الوظيفي مطلوبان', 'error');
     try {
       if (id) { await update(id, fields); toast('تم تحديث الطلب', 'success'); }
       else { await create(fields); toast('تمت إضافة الطلب', 'success'); }
       closeModal();
+    } catch (err) { toast(err.message, 'error'); }
+  }
+
+  /* =====================================================================
+   * Smart Follow-up (البند 15): 5 أيام → متابعة 1 → 7 أيام → متابعة 2
+   * توليد مخصص بالـ AI بناءً على الشركة + الوظيفة + التواصل السابق
+   * ===================================================================== */
+  let followupApp = null;
+
+  async function openFollowupModal(appId) {
+    followupApp = AppState.applications.find(a => a.id === appId);
+    if (!followupApp) return;
+    const modal = document.getElementById('followup-modal');
+    document.getElementById('followup-target').innerHTML =
+      `<strong>${escapeHtml(followupApp.company)}</strong> — ${escapeHtml(followupApp.job_title)}`;
+    document.getElementById('followup-result').classList.add('hidden');
+    document.getElementById('followup-subject').value = '';
+    document.getElementById('followup-body').value = '';
+    modal.classList.remove('hidden');
+  }
+
+  async function generateFollowup(which) {
+    if (!followupApp) return;
+    if (!AI.isConfigured()) return toast('أعدّ مفتاح Gemini من إدارة الـ APIs أولاً', 'error');
+    const btn = document.getElementById(`btn-followup-${which}`);
+    setLoading(btn, true, 'جارٍ التوليد...');
+    try {
+      let prevComms = [];
+      try {
+        if (followupApp.company_id) prevComms = await DB.companyCommunications(followupApp.company_id);
+      } catch (_) { /* تجاهل */ }
+      const prevText = prevComms.slice(0, 3).map(c => `- ${c.type}: ${c.subject || ''} ${(c.body || '').slice(0, 200)}`).join('\n') || 'لا يوجد تواصل سابق مسجل';
+      const profile = AppState.cvProfile;
+      const numLabel = which === 1 ? 'الأولى (بعد 5 أيام من التقديم)' : 'الثانية (بعد 7 أيام من الأولى)';
+
+      const prompt = `اكتب إيميل متابعة (Follow-up) ${numLabel} مهذباً واحترافياً لطلب توظيف.
+
+الشركة: ${followupApp.company}
+الوظيفة: ${followupApp.job_title}
+${followupApp.contact_email ? `المستلم: ${followupApp.contact_email}` : ''}
+${profile ? `ملخص المرشح: مهارات ${(profile.skills || []).slice(0, 10).join('، ')} — خبرة ~${profile.years_experience || '؟'} سنوات` : ''}
+
+التواصل السابق مع الشركة:
+${prevText}
+
+القواعد: عربية فصحى مهنية، 80-120 كلمة، تذكير لطيف بالتقديم، إبراز نقطة قوة واحدة حقيقية، سؤال مباشر عن حالة الطلب، توقيع باسم "${AppState.settings.senderName || 'المتقدم'}". لا تختلق معلومات.
+أعد JSON: {"subject":"<العنوان>","body":"<النص>"}`;
+
+      const r = await AI.generateJSON(prompt, { maxTokens: 1024, temperature: 0.6 });
+      document.getElementById('followup-subject').value = r.subject || '';
+      document.getElementById('followup-body').value = r.body || '';
+      document.getElementById('followup-result').classList.remove('hidden');
+      document.getElementById('followup-result').dataset.which = which;
+    } catch (err) { toast(err.message, 'error'); }
+    finally { setLoading(btn, false); }
+  }
+
+  async function applyFollowup() {
+    if (!followupApp) return;
+    const which = +document.getElementById('followup-result').dataset.which || 1;
+    const subject = document.getElementById('followup-subject').value.trim();
+    const body = document.getElementById('followup-body').value.trim();
+    if (!body) return toast('ولّد الرسالة أولاً', 'error');
+    try {
+      const next = which === 1
+        ? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+        : '';
+      await update(followupApp.id, { followup_date: next, status: 'contacted' });
+      let companyId = followupApp.company_id;
+      if (!companyId) {
+        const found = await DB.findCompany(followupApp.company).catch(() => null);
+        companyId = found?.company?.id || '';
+      }
+      if (companyId) {
+        await DB.logCommunication({
+          company_id: companyId, application_id: followupApp.id,
+          type: 'followup_sent', subject, body, direction: 'outbound'
+        });
+        if (!followupApp.company_id) await DB.update('applications', followupApp.id, { company_id: companyId });
+      }
+      if (followupApp.contact_email) {
+        window.location.href = `mailto:${encodeURIComponent(followupApp.contact_email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      } else {
+        await navigator.clipboard.writeText(`${subject}\n\n${body}`);
+        toast('لا يوجد إيميل مستلم — نُسخت الرسالة للحافظة', 'info');
+      }
+      document.getElementById('followup-modal').classList.add('hidden');
+      toast(which === 1 ? 'سُجّلت المتابعة الأولى — القادمة بعد 7 أيام' : 'سُجّلت المتابعة الثانية — اكتملت الدورة', 'success');
     } catch (err) { toast(err.message, 'error'); }
   }
 
@@ -202,7 +344,12 @@ const TrackerModule = (() => {
       if (e.target.id === 'app-modal') closeModal();
     });
 
-    // تبديل Kanban / جدول
+    document.getElementById('btn-followup-1')?.addEventListener('click', () => generateFollowup(1));
+    document.getElementById('btn-followup-2')?.addEventListener('click', () => generateFollowup(2));
+    document.getElementById('btn-followup-send')?.addEventListener('click', applyFollowup);
+    document.querySelectorAll('[data-close="followup-modal"]').forEach(b =>
+      b.addEventListener('click', () => document.getElementById('followup-modal').classList.add('hidden')));
+
     document.querySelectorAll('#board-toggle .toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#board-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
@@ -216,7 +363,7 @@ const TrackerModule = (() => {
     refresh().catch(err => console.warn('تعذر تحميل الطلبات:', err));
   }
 
-  return { init, create, refresh, render };
+  return { init, create, update, refresh, render, openModal, dueFollowups, normStatus, STATUS };
 })();
 
 /* =====================================================================
@@ -231,7 +378,7 @@ const TemplatesModule = (() => {
     const res = await fetch(`tables/${TABLE}?limit=200&sort=-created_at`);
     if (!res.ok) throw new Error('تعذر تحميل النماذج');
     const data = await res.json();
-    AppState.templates = data.data || [];
+    AppState.templates = (data.data || []).filter(r => !r.deleted);
     return AppState.templates;
   }
 
@@ -305,7 +452,6 @@ const TemplatesModule = (() => {
   }
 
   function exportTemplatePdf(t) {
-    // تصدير نموذج CV محفوظ كـ PDF عبر نفس أداة المعالج
     const container = document.createElement('div');
     container.style.cssText = 'direction:rtl;font-family:Cairo,Arial,sans-serif;padding:40px;font-size:13px;line-height:1.9;color:#111;background:#fff;width:750px;';
     container.innerHTML = mdToHtml(t.content);
@@ -346,7 +492,6 @@ const TemplatesModule = (() => {
       if (e.target.id === 'template-modal') e.target.classList.add('hidden');
     });
 
-    // الفلاتر
     document.querySelectorAll('#templates-filter .toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#templates-filter .toggle-btn').forEach(b => b.classList.remove('active'));

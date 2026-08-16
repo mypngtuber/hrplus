@@ -22,6 +22,9 @@
     </div>
     <nav class="nav">
       <button class="nav-btn active" data-view="dashboard"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم والتتبع</button>
+      <button class="nav-btn" data-view="agent"><i class="fa-solid fa-robot"></i> وكيل الصيد الوظيفي</button>
+      <button class="nav-btn" data-view="companies"><i class="fa-solid fa-building"></i> قاعدة الشركات</button>
+      <button class="nav-btn hidden" data-view="company-profile"><i class="fa-solid fa-id-card"></i> ملف الشركة</button>
       <button class="nav-btn" data-view="campaign"><i class="fa-solid fa-bullseye"></i> الحملة الذكية (Bulk)</button>
       <button class="nav-btn" data-view="cv"><i class="fa-solid fa-file-lines"></i> محسّن السيرة الذاتية ATS</button>
       <button class="nav-btn" data-view="jobs"><i class="fa-solid fa-magnifying-glass"></i> البحث والتواصل مع HR</button>
@@ -55,11 +58,30 @@
         <p>تابع جميع طلبات التوظيف من الإرسال حتى القبول</p>
       </header>
 
-      <div class="stats-grid">
-        <div class="stat-card"><i class="fa-solid fa-paper-plane"></i><div><strong id="stat-total">0</strong><span>إجمالي الطلبات</span></div></div>
-        <div class="stat-card"><i class="fa-solid fa-handshake"></i><div><strong id="stat-interviews">0</strong><span>مقابلات</span></div></div>
-        <div class="stat-card"><i class="fa-solid fa-clock"></i><div><strong id="stat-pending">0</strong><span>قيد الانتظار</span></div></div>
-        <div class="stat-card"><i class="fa-solid fa-circle-check"></i><div><strong id="stat-accepted">0</strong><span>مقبول</span></div></div>
+      <div class="toolbar" style="margin-bottom:14px">
+        <div class="stats-grid" style="flex:1;margin-bottom:0">
+          <div class="stat-card"><i class="fa-solid fa-briefcase"></i><div><strong id="d-jobs">0</strong><span>وظائف مكتشفة</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-star"></i><div><strong id="d-new-jobs">0</strong><span>وظائف جديدة</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-bullseye"></i><div><strong id="d-high-match">0</strong><span>عالية التطابق</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-building"></i><div><strong id="d-companies">0</strong><span>شركات</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-users"></i><div><strong id="d-contacts">0</strong><span>جهات HR</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-shield-halved"></i><div><strong id="d-verified-emails">0</strong><span>إيميلات صالحة</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-paper-plane"></i><div><strong id="d-applications">0</strong><span>طلبات التقديم</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-handshake"></i><div><strong id="d-interviews">0</strong><span>مقابلات</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-trophy"></i><div><strong id="d-offers">0</strong><span>عروض</span></div></div>
+          <div class="stat-card"><i class="fa-solid fa-chart-pie"></i><div><strong id="d-response-rate">0%</strong><span>معدل الاستجابة</span></div></div>
+        </div>
+        <button class="btn btn-outline" id="btn-dashboard-refresh"><i class="fa-solid fa-rotate"></i> تحديث</button>
+      </div>
+
+      <div class="alerts-box hidden" id="alerts-box"></div>
+
+      <div class="charts-grid">
+        <div class="card chart-card"><h3>وظائف لكل يوم</h3><div class="chart-wrap"><canvas id="chart-jobs-per-day"></canvas></div></div>
+        <div class="card chart-card"><h3>طلبات لكل أسبوع</h3><div class="chart-wrap"><canvas id="chart-apps-per-week"></canvas></div></div>
+        <div class="card chart-card"><h3>أهم المصادر</h3><div class="chart-wrap"><canvas id="chart-sources"></canvas></div></div>
+        <div class="card chart-card"><h3>قمع التقديم</h3><div class="chart-wrap"><canvas id="chart-funnel"></canvas></div></div>
+        <div class="card chart-card"><h3>أكثر الشركات</h3><div class="chart-wrap"><canvas id="chart-top-companies"></canvas></div></div>
       </div>
 
       <div class="toolbar">
@@ -77,6 +99,132 @@
           <thead><tr><th>الشركة</th><th>الوظيفة</th><th>الموقع</th><th>الحالة</th><th>تاريخ التقديم</th><th>إجراءات</th></tr></thead>
           <tbody id="apps-tbody"></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- ================= قاعدة الشركات ================= -->
+    <section class="view" id="view-companies">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-building"></i> قاعدة الشركات</h2>
+        <p>كل الشركات المكتشفة من مصادر حقيقية — قابلة للبحث والفلترة والتعديل والتصدير</p>
+      </header>
+
+      <div class="card">
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label for="company-filter-input">بحث داخل الشركات</label>
+            <input type="text" id="company-filter-input" class="input" placeholder="اسم الشركة أو الدومين أو المجال">
+          </div>
+          <div class="form-group">
+            <label for="company-sort-select">ترتيب حسب</label>
+            <select id="company-sort-select" class="input">
+              <option value="last_verified">آخر تحقق</option>
+              <option value="name">الاسم</option>
+              <option value="industry">المجال</option>
+              <option value="domain">الدومين</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <input type="text" id="company-search-input" class="input" placeholder="اكتشف شركة جديدة باسمها...">
+          <button class="btn btn-primary" id="btn-company-discover"><i class="fa-solid fa-magnifying-glass"></i> اكتشاف شركة</button>
+          <button class="btn btn-outline" id="btn-companies-refresh"><i class="fa-solid fa-rotate"></i> تحديث القائمة</button>
+          <button class="btn btn-outline" id="btn-companies-csv"><i class="fa-solid fa-file-csv"></i> تصدير CSV</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-table"></i> الشركات المكتشفة <span class="badge-optional" id="companies-count">0</span></h3>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr><th>الشركة</th><th>المجال</th><th>الدومين</th><th>إيميلات HR</th><th>جهات HR</th><th>LinkedIn</th><th>الوظائف</th><th>آخر تحقق</th><th>إجراءات</th></tr>
+            </thead>
+            <tbody id="companies-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ملف الشركة ================= -->
+    <section class="view" id="view-company-profile">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-id-card"></i> ملف الشركة</h2>
+        <p>معلومات الشركة + الوظائف + جهات HR + الإيميلات + طلبات التقديم + سجل التواصل</p>
+      </header>
+      <div id="company-profile-content"></div>
+    </section>
+
+    <!-- ================= وكيل الصيد الوظيفي ================= -->
+    <section class="view" id="view-agent">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-robot"></i> وكيل الصيد الوظيفي الذكي</h2>
+        <p>بحث + تحليل + اكتشاف شركات وHR وإيميلات — مع مراجعة واعتماد إلزامي قبل أي إجراء</p>
+      </header>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-sliders"></i> معايير الوكيل</h3>
+        <div class="form-row">
+          <div class="form-group"><label>الوظيفة المستهدفة</label><input type="text" id="agent-target" class="input" placeholder="مثال: Data Engineer"></div>
+          <div class="form-group"><label>المدينة</label><select id="agent-location" class="input"><option value="">كل مصر</option><option value="القاهرة">القاهرة</option><option value="الجيزة">الجيزة</option><option value="الإسكندرية">الإسكندرية</option><option value="المنصورة">المنصورة</option></select></div>
+          <div class="form-group"><label>الخبرة</label><input type="text" id="agent-experience" class="input" placeholder="مثال: 3 سنوات"></div>
+          <div class="form-group"><label>العمل عن بُعد</label><select id="agent-remote" class="input"><option value="any">أي</option><option value="remote">عن بُعد</option><option value="onsite">من الموقع</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>الراتب المستهدف</label><input type="text" id="agent-salary" class="input" placeholder="اختياري"></div>
+          <div class="form-group"><label>المجالات</label><input type="text" id="agent-industries" class="input" placeholder="مثال: بنوك، اتصالات، تكنولوجيا"></div>
+          <div class="form-group"><label>حد التطابق الأدنى %</label><input type="number" id="agent-min-match" class="input" min="0" max="100" value="70"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-agent-run"><i class="fa-solid fa-play"></i> تشغيل الوكيل</button>
+          <button class="btn btn-danger-outline" id="btn-agent-cancel"><i class="fa-solid fa-stop"></i> إيقاف</button>
+          <button class="btn btn-outline" id="btn-agent-save-search"><i class="fa-solid fa-bookmark"></i> حفظ كبحث محفوظ</button>
+        </div>
+      </div>
+
+      <div class="card hidden" id="agent-progress">
+        <h3><i class="fa-solid fa-spinner fa-spin"></i> تقدم الوكيل</h3>
+        <div class="progress-text" id="agent-progress-text"></div>
+        <div id="agent-log" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-list-check"></i> مراحل التنفيذ</h3>
+        <div class="agent-steps">
+          <div class="agent-step" id="astep-search"><i class="fa-solid fa-circle"></i> Search</div>
+          <div class="agent-step" id="astep-dedupe"><i class="fa-solid fa-circle"></i> Dedupe</div>
+          <div class="agent-step" id="astep-validate"><i class="fa-solid fa-circle"></i> Validate</div>
+          <div class="agent-step" id="astep-match"><i class="fa-solid fa-circle"></i> Match</div>
+          <div class="agent-step" id="astep-company"><i class="fa-solid fa-circle"></i> Company</div>
+          <div class="agent-step" id="astep-hr"><i class="fa-solid fa-circle"></i> HR</div>
+          <div class="agent-step" id="astep-email"><i class="fa-solid fa-circle"></i> Email</div>
+          <div class="agent-step" id="astep-rank"><i class="fa-solid fa-circle"></i> Rank</div>
+          <div class="agent-step" id="astep-prepare"><i class="fa-solid fa-circle"></i> Prepare</div>
+          <div class="agent-step" id="astep-review"><i class="fa-solid fa-circle"></i> Review</div>
+        </div>
+      </div>
+
+      <div class="card hidden" id="agent-review-actions">
+        <h3><i class="fa-solid fa-check-double"></i> المراجعة والاعتماد</h3>
+        <p id="agent-review-summary" style="margin-bottom:12px;color:var(--text-muted)"></p>
+        <div class="btn-row">
+          <button class="btn btn-success" id="btn-agent-to-campaign"><i class="fa-solid fa-bullseye"></i> إرسال المعتمدة إلى الحملة</button>
+        </div>
+      </div>
+
+      <div id="agent-review"></div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-bookmark"></i> عمليات البحث المحفوظة</h3>
+        <div class="form-row">
+          <div class="form-group"><label>المسمى الوظيفي</label><input type="text" id="ss-query" class="input" placeholder="مثال: Quality Engineer"></div>
+          <div class="form-group"><label>المدينة</label><select id="ss-city" class="input"><option value="">كل مصر</option><option value="القاهرة">القاهرة</option><option value="الإسكندرية">الإسكندرية</option><option value="Remote">عن بُعد</option></select></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-add-saved-search"><i class="fa-solid fa-plus"></i> إضافة بحث محفوظ</button>
+          <button class="btn btn-outline" id="btn-search-all"><i class="fa-solid fa-bolt"></i> Search All</button>
+        </div>
+        <div id="saved-searches-list"></div>
       </div>
     </section>
 
@@ -156,6 +304,7 @@
           <button class="btn btn-primary" id="btn-send-approved"><i class="fa-solid fa-paper-plane"></i> إرسال الرسائل المعتمدة</button>
           <button class="btn btn-outline" id="btn-approve-all"><i class="fa-solid fa-check-double"></i> اعتماد الكل</button>
         </div>
+        <div id="send-controls" class="send-controls hidden"></div>
         <div id="send-log"></div>
       </div>
     </section>
@@ -374,10 +523,12 @@
           <div class="form-group">
             <label>الحالة</label>
             <select id="app-status" class="input">
-              <option value="sent">مُرسل</option>
+              <option value="found">مُكتشفة</option>
+              <option value="interested">مهتم</option>
+              <option value="applied">تم التقديم</option>
+              <option value="contacted">تم التواصل</option>
               <option value="interview">مقابلة</option>
-              <option value="pending">معلق</option>
-              <option value="accepted">مقبول</option>
+              <option value="offer">عرض عمل</option>
               <option value="rejected">مرفوض</option>
             </select>
           </div>
@@ -386,12 +537,83 @@
           <div class="form-group"><label>رابط الوظيفة</label><input type="url" id="app-job-url" class="input ltr"></div>
           <div class="form-group"><label>إيميل التواصل</label><input type="email" id="app-contact-email" class="input ltr"></div>
         </div>
+        <div class="form-row">
+          <div class="form-group"><label>الـ CV المستخدم</label><select id="app-cv" class="input"></select></div>
+          <div class="form-group"><label>المصدر</label><input type="text" id="app-source" class="input" placeholder="مثال: LinkedIn / Wuzzuf / الحملة الذكية"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>تاريخ المتابعة</label><input type="date" id="app-followup" class="input"></div>
+          <div class="form-group"><label>تاريخ المقابلة</label><input type="date" id="app-interview" class="input"></div>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="app-email-sent">
+          <label for="app-email-sent" style="margin:0">تم إرسال إيميل التقديم</label>
+        </div>
         <div class="form-group"><label>ملاحظات</label><textarea id="app-notes" class="textarea" rows="3"></textarea></div>
         <input type="hidden" id="app-edit-id">
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" id="modal-cancel">إلغاء</button>
         <button class="btn btn-primary" id="modal-save"><i class="fa-solid fa-check"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== نافذة تعديل شركة ===== -->
+  <div class="modal-overlay hidden" id="company-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>تعديل بيانات الشركة</h3>
+        <button class="icon-btn" data-close="company-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label>اسم الشركة</label><input type="text" id="co-name" class="input"></div>
+          <div class="form-group"><label>الموقع الرسمي</label><input type="url" id="co-website" class="input ltr"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>الدومين</label><input type="text" id="co-domain" class="input ltr"></div>
+          <div class="form-group"><label>المجال</label><input type="text" id="co-industry" class="input"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>المدينة</label><input type="text" id="co-city" class="input"></div>
+          <div class="form-group"><label>LinkedIn</label><input type="url" id="co-linkedin" class="input ltr"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>صفحة الوظائف</label><input type="url" id="co-careers" class="input ltr"></div>
+          <div class="form-group"><label>صفحة الاتصال</label><input type="url" id="co-contact" class="input ltr"></div>
+        </div>
+        <div class="form-group"><label>ملاحظات</label><textarea id="co-notes" class="textarea" rows="3"></textarea></div>
+        <input type="hidden" id="co-edit-id">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="company-modal">إلغاء</button>
+        <button class="btn btn-primary" id="btn-company-modal-save"><i class="fa-solid fa-check"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== نافذة المتابعة الذكية ===== -->
+  <div class="modal-overlay hidden" id="followup-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>متابعة ذكية</h3>
+        <button class="icon-btn" data-close="followup-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="note-box small" id="followup-target"></div>
+        <div class="btn-row">
+          <button class="btn btn-outline" id="btn-followup-1"><i class="fa-solid fa-reply"></i> توليد المتابعة الأولى</button>
+          <button class="btn btn-outline" id="btn-followup-2"><i class="fa-solid fa-reply-all"></i> توليد المتابعة الثانية</button>
+        </div>
+        <div id="followup-result" class="hidden">
+          <div class="form-group"><label>العنوان</label><input type="text" id="followup-subject" class="input"></div>
+          <div class="form-group"><label>الرسالة</label><textarea id="followup-body" class="textarea" rows="8"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="followup-modal">إلغاء</button>
+        <button class="btn btn-primary" id="btn-followup-send"><i class="fa-solid fa-paper-plane"></i> تسجيل/فتح الإرسال</button>
       </div>
     </div>
   </div>
@@ -434,16 +656,22 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <script src="js/storage.js"></script>
   <script src="js/ai.js"></script>
+  <script src="js/db.js"></script>
   <script src="js/apimanager.js"></script>
   <script src="js/search.js"></script>
+  <script src="js/company.js"></script>
+  <script src="js/matching.js"></script>
   <script src="js/cv.js"></script>
   <script src="js/jobs.js"></script>
   <script src="js/gap.js"></script>
   <script src="js/bulk.js"></script>
   <script src="js/tracker.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/agent.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

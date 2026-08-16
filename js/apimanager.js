@@ -46,27 +46,31 @@ const ApiManager = (() => {
       }
     },
     {
-      id: 'google',
-      name: 'Google Custom Search — LinkedIn + Wuzzuf + Google',
-      icon: 'fa-google',
-      required: false,
-      desc: 'يبحث داخل LinkedIn وWuzzuf وGoogle عن وظائف وشركات في مصر. يحتاج API Key + Search Engine ID (CX) — كلاهما مجاني.',
-      hint: 'programmablesearchengine.google.com',
-      hintUrl: 'https://programmablesearchengine.google.com/controlpanel/create',
+      id: 'serper',
+      name: 'Serper — محرك البحث الحقيقي في الويب',
+      icon: 'fa-magnifying-glass',
+      required: true,
+      desc: 'البحث الحقيقي في LinkedIn وWuzzuf ومواقع الشركات وJob Boards عبر Web Search (gl=eg / hl=ar). لا Mock Data ولا بيانات مولدة بالـ AI.',
+      hint: 'serper.dev',
+      hintUrl: 'https://serper.dev/',
       fields: [
-        { key: 'googleApiKey', label: 'Google API Key', placeholder: 'اختياري', password: true },
-        { key: 'googleCx', label: 'Search Engine ID (CX)', placeholder: 'اختياري', password: false }
+        { key: 'serperKey', label: 'Serper API Key', placeholder: 'اختياري', password: true }
       ],
+      note: 'يستخدم في البحث عن الوظائف، اكتشاف الشركات، HR، والإيميلات — بدون Google Custom Search.',
       async test(s) {
-        if (!s.googleApiKey || !s.googleCx) throw new Error('أدخل API Key و CX معاً');
+        if (!s.serperKey) throw new Error('أدخل المفتاح أولاً');
         const t0 = performance.now();
-        const res = await fetch(`https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(s.googleApiKey)}&cx=${encodeURIComponent(s.googleCx)}&q=test&num=1`);
+        const res = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: { 'X-API-KEY': s.serperKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: 'site:linkedin.com/jobs "Data Engineer" Egypt', gl: 'eg', hl: 'ar', num: 1 })
+        });
         const latency = Math.round(performance.now() - t0);
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          return { ok: false, latency, message: err.error?.message || `HTTP ${res.status}` };
+          return { ok: false, latency, message: err.message || err.error || `HTTP ${res.status}` };
         }
-        return { ok: true, latency, message: 'محرك البحث يعمل بنجاح' };
+        return { ok: true, latency, message: 'Serper يعمل — نتائج حقيقية متاحة' };
       }
     },
     {
