@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مساعد التوظيف الذكي | AI Career Copilot — مصر</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== الشريط الجانبي ===== -->
+  <aside class="sidebar" id="app-sidebar">
+    <div class="brand">
+      <i class="fa-solid fa-rocket brand-icon"></i>
+      <div>
+        <h1>مساعد التوظيف</h1>
+        <span>AI Career Copilot · مصر 🇪🇬</span>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="dashboard"><i class="fa-solid fa-gauge-high"></i> لوحة التحكم والتتبع</button>
+      <button class="nav-btn" data-view="campaign"><i class="fa-solid fa-bullseye"></i> الحملة الذكية (Bulk)</button>
+      <button class="nav-btn" data-view="cv"><i class="fa-solid fa-file-lines"></i> محسّن السيرة الذاتية ATS</button>
+      <button class="nav-btn" data-view="jobs"><i class="fa-solid fa-magnifying-glass"></i> البحث والتواصل مع HR</button>
+      <button class="nav-btn" data-view="gap"><i class="fa-solid fa-chart-line"></i> الفجوة المهارية والكورسات</button>
+      <button class="nav-btn" data-view="templates"><i class="fa-solid fa-layer-group"></i> مكتبة النماذج</button>
+      <button class="nav-btn" data-view="settings"><i class="fa-solid fa-gear"></i> إدارة الـ APIs</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="ai-status-chip" class="ai-status-chip off">
+        <i class="fa-solid fa-circle"></i> <span id="ai-status-text">الذكاء الاصطناعي: غير مفعّل</span>
+      </div>
+    </div>
+  </aside>
+
+  <button class="menu-toggle" id="menu-toggle" aria-label="القائمة"><i class="fa-solid fa-bars"></i></button>
+
+  <main class="main-content">
+
+    <!-- شريط الـ CV النشط (يظهر في كل الوحدات) -->
+    <div class="active-cv-bar hidden" id="active-cv-bar">
+      <i class="fa-solid fa-file-circle-check"></i>
+      <span>الـ CV النشط: <strong id="active-cv-name">—</strong></span>
+      <span class="cv-skills-preview" id="active-cv-skills"></span>
+      <button class="btn btn-outline btn-sm" id="btn-change-cv"><i class="fa-solid fa-rotate"></i> تغيير</button>
+    </div>
+
+    <!-- ================= لوحة التحكم ================= -->
+    <section class="view active" id="view-dashboard">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-gauge-high"></i> لوحة التحكم وتتبع التقديمات</h2>
+        <p>تابع جميع طلبات التوظيف من الإرسال حتى القبول</p>
+      </header>
+
+      <div class="stats-grid">
+        <div class="stat-card"><i class="fa-solid fa-paper-plane"></i><div><strong id="stat-total">0</strong><span>إجمالي الطلبات</span></div></div>
+        <div class="stat-card"><i class="fa-solid fa-handshake"></i><div><strong id="stat-interviews">0</strong><span>مقابلات</span></div></div>
+        <div class="stat-card"><i class="fa-solid fa-clock"></i><div><strong id="stat-pending">0</strong><span>قيد الانتظار</span></div></div>
+        <div class="stat-card"><i class="fa-solid fa-circle-check"></i><div><strong id="stat-accepted">0</strong><span>مقبول</span></div></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toggle-group" id="board-toggle">
+          <button class="toggle-btn active" data-mode="kanban"><i class="fa-solid fa-table-columns"></i> Kanban</button>
+          <button class="toggle-btn" data-mode="table"><i class="fa-solid fa-table"></i> جدول</button>
+        </div>
+        <button class="btn btn-primary" id="btn-add-app"><i class="fa-solid fa-plus"></i> إضافة طلب تقديم</button>
+      </div>
+
+      <div class="kanban" id="kanban-board"></div>
+
+      <div class="table-wrapper hidden" id="table-view">
+        <table class="data-table">
+          <thead><tr><th>الشركة</th><th>الوظيفة</th><th>الموقع</th><th>الحالة</th><th>تاريخ التقديم</th><th>إجراءات</th></tr></thead>
+          <tbody id="apps-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= الحملة الذكية (Bulk) ================= -->
+    <section class="view" id="view-campaign">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-bullseye"></i> الحملة الذكية — بحث + إيميلات حقيقية + رسائل مخصصة + إرسال</h2>
+        <p>من الـ CV إلى إرسال رسائل التقديم في مصر — خطوة بخطوة مع مراجعة كاملة قبل أي إرسال</p>
+      </header>
+
+      <!-- الخطوة 1: الـ CV -->
+      <div class="card">
+        <h3><span class="step-num">1</span> الـ CV المستخدم في الحملة <span class="badge-optional">اختياري لكن مُوصى به</span></h3>
+        <div id="campaign-cv-slot"></div>
+      </div>
+
+      <!-- الخطوة 2: البحث -->
+      <div class="card">
+        <h3><span class="step-num">2</span> البحث عن وظائف وشركات في مصر</h3>
+        <div class="note-box">
+          <i class="fa-solid fa-location-dot"></i>
+          <span>النطاق الجغرافي: <strong>مصر فقط</strong> — المصادر: JSearch · LinkedIn · Wuzzuf · Google Search (حسب المفاتيح المتاحة في <button class="link-btn" data-goto="settings">إدارة الـ APIs</button>). بدون مفاتيح تُعرض روابط بحث مباشرة جاهزة.</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label for="campaign-query">المسمى الوظيفي المستهدف</label>
+            <input type="text" id="campaign-query" class="input" placeholder="مثال: محاسب / مبرمج / مسوّق رقمي — أو اتركه فارغاً ليُستنتج من الـ CV">
+          </div>
+          <div class="form-group">
+            <label for="campaign-city">المدينة</label>
+            <select id="campaign-city" class="input">
+              <option value="">كل مصر</option>
+              <option value="القاهرة">القاهرة</option>
+              <option value="الجيزة">الجيزة</option>
+              <option value="الإسكندرية">الإسكندرية</option>
+              <option value="المنصورة">المنصورة</option>
+              <option value="Remote">عن بُعد (داخل مصر)</option>
+            </select>
+          </div>
+        </div>
+        <div class="source-chips" id="source-chips"></div>
+        <button class="btn btn-primary" id="btn-campaign-search"><i class="fa-solid fa-magnifying-glass"></i> بحث شامل في مصر</button>
+        <div id="campaign-jobs"></div>
+      </div>
+
+      <!-- الخطوة 3: الإيميلات الحقيقية -->
+      <div class="card">
+        <h3><span class="step-num">3</span> استخراج إيميلات HR الحقيقية <span class="badge-verified"><i class="fa-solid fa-shield-halved"></i> مُتحقَّق منها فقط</span></h3>
+        <div class="note-box">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><strong>سياسة صارمة:</strong> لا يعرض النظام إلا الإيميلات <strong>الحقيقية المُتحقَّق من وجودها</strong> عبر Hunter.io — لا تخمين ولا أنماط متوقعة إطلاقاً. أضف مفتاح Hunter من <button class="link-btn" data-goto="settings">إدارة الـ APIs</button>.</span>
+        </div>
+        <button class="btn btn-primary" id="btn-find-all-emails"><i class="fa-solid fa-at"></i> استخراج الإيميلات للشركات المحددة</button>
+        <div id="campaign-contacts"></div>
+      </div>
+
+      <!-- الخطوة 4: التوليد الجماعي -->
+      <div class="card">
+        <h3><span class="step-num">4</span> توليد رسائل مخصصة لكل شركة (Bulk Generation)</h3>
+        <div class="note-box">
+          <i class="fa-solid fa-brain"></i>
+          <span>يتعرف الذكاء الاصطناعي على <strong>مجال كل شركة</strong> ويقارنه بخبراتك: إن كانت لديك خبرة في نفس المجال يُركّز عليها، وإلا يُبرز مهاراتك القابلة للنقل <strong>دون ادّعاء خبرة غير حقيقية</strong>.</span>
+        </div>
+        <button class="btn btn-success" id="btn-generate-bulk"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد الرسائل المخصصة</button>
+        <div id="bulk-progress" class="hidden"></div>
+        <div id="bulk-messages"></div>
+      </div>
+
+      <!-- الخطوة 5: المراجعة والإرسال -->
+      <div class="card">
+        <h3><span class="step-num">5</span> المراجعة والإرسال</h3>
+        <div id="emailjs-warning" class="note-box hidden" style="background:#fef3c7;border-color:#fde68a;color:#92400e">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>الإرسال المباشر يتطلب إعداد <strong>EmailJS</strong> (مجاني — يرسل من حساب بريدك) من <button class="link-btn" data-goto="settings">إدارة الـ APIs</button>. بدونه يمكنك فتح الرسائل في تطبيق بريدك عبر زر "فتح في البريد".</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-send-approved"><i class="fa-solid fa-paper-plane"></i> إرسال الرسائل المعتمدة</button>
+          <button class="btn btn-outline" id="btn-approve-all"><i class="fa-solid fa-check-double"></i> اعتماد الكل</button>
+        </div>
+        <div id="send-log"></div>
+      </div>
+    </section>
+
+    <!-- ================= معالج السيرة الذاتية ================= -->
+    <section class="view" id="view-cv">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-file-lines"></i> محسّن السيرة الذاتية (CV Optimizer & ATS)</h2>
+        <p>ارفع سيرتك — احفظها داخل التطبيق — استخدمها في كل الأنظمة</p>
+      </header>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-floppy-disk"></i> نسخ الـ CV المحفوظة</h3>
+        <div id="saved-cvs-list"></div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-cloud-arrow-up"></i> 1. رفع سيرة ذاتية جديدة</h3>
+        <div class="upload-zone" id="cv-upload-zone">
+          <input type="file" id="cv-file-input" accept=".pdf,.docx,.txt" hidden>
+          <i class="fa-solid fa-file-arrow-up fa-3x"></i>
+          <p>اسحب ملف <strong>PDF</strong> أو <strong>DOCX</strong> هنا، أو <span class="link">اختر ملفاً</span></p>
+        </div>
+        <div class="or-divider">أو الصق النص مباشرة</div>
+        <textarea id="cv-raw-text" class="textarea" rows="8" placeholder="الصق نص سيرتك الذاتية هنا..."></textarea>
+        <div class="btn-row">
+          <button class="btn btn-success" id="btn-save-cv-profile"><i class="fa-solid fa-floppy-disk"></i> حفظ وتفعيل هذه النسخة</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-wand-magic-sparkles"></i> 2. التحليل وإعادة الصياغة بالذكاء الاصطناعي</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cv-target-role">الوظيفة المستهدفة</label>
+            <input type="text" id="cv-target-role" class="input" placeholder="مثال: مهندس برمجيات / محاسب / مسوّق رقمي">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-analyze-cv"><i class="fa-solid fa-brain"></i> تحليل ATS شامل</button>
+          <button class="btn btn-success" id="btn-optimize-cv"><i class="fa-solid fa-bolt"></i> إعادة صياغة وتحسين الـ CV</button>
+        </div>
+        <div id="cv-analysis-result" class="result-box hidden"></div>
+        <div class="compare-grid hidden" id="cv-compare">
+          <div>
+            <h4><i class="fa-solid fa-file"></i> النسخة الأصلية</h4>
+            <textarea id="cv-original-view" class="textarea mono" rows="16" readonly></textarea>
+          </div>
+          <div>
+            <h4><i class="fa-solid fa-star"></i> النسخة المحسّنة</h4>
+            <textarea id="cv-optimized-view" class="textarea mono" rows="16"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="cv-export-card" style="display:none">
+        <h3><i class="fa-solid fa-download"></i> 3. التصدير</h3>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-export-pdf"><i class="fa-solid fa-file-pdf"></i> تحميل PDF</button>
+          <button class="btn btn-primary" id="btn-export-docx"><i class="fa-solid fa-file-word"></i> تحميل Word (DOCX)</button>
+          <button class="btn btn-outline" id="btn-save-cv-template"><i class="fa-solid fa-bookmark"></i> حفظ في مكتبة النماذج</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= البحث والتواصل ================= -->
+    <section class="view" id="view-jobs">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-magnifying-glass"></i> البحث والتواصل مع HR — مصر</h2>
+        <p>بحث فردي سريع + استخراج إيميلات حقيقية + رسالة مخصصة واحدة</p>
+      </header>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-briefcase"></i> بحث الوظائف (مصر)</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="job-query">المسمى الوظيفي</label>
+            <input type="text" id="job-query" class="input" placeholder="مثال: محاسب مالي">
+          </div>
+          <div class="form-group">
+            <label for="job-city">المدينة</label>
+            <select id="job-city" class="input">
+              <option value="">كل مصر</option>
+              <option value="القاهرة">القاهرة</option>
+              <option value="الجيزة">الجيزة</option>
+              <option value="الإسكندرية">الإسكندرية</option>
+              <option value="Remote">عن بُعد</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-search-jobs"><i class="fa-solid fa-magnifying-glass"></i> بحث</button>
+        <div id="jobs-results"></div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-at"></i> إيميلات HR الحقيقية <span class="badge-verified"><i class="fa-solid fa-shield-halved"></i> مُتحقَّق منها فقط</span></h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="hr-company">اسم الشركة</label>
+            <input type="text" id="hr-company" class="input" placeholder="مثال: Vodafone Egypt">
+          </div>
+          <div class="form-group">
+            <label for="hr-domain">النطاق (اختياري — يحسّن الدقة)</label>
+            <input type="text" id="hr-domain" class="input ltr" placeholder="example.com">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-find-contacts"><i class="fa-solid fa-address-book"></i> استخراج الإيميلات المُتحقَّق منها</button>
+        <div class="note-box small">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span><strong>بدون تخمين:</strong> تظهر فقط الإيميلات التي أكّد Hunter.io وجودها فعلياً على النطاق. إن لم توجد نتائج مؤكدة، نوفّر روابط LinkedIn للتواصل المباشر بدلاً منها.</span>
+        </div>
+        <div id="contacts-results"></div>
+      </div>
+
+      <div class="card">
+        <h3><i class="fa-solid fa-envelope-open-text"></i> مولّد رسالة مخصصة (واحدة)</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="msg-company">الشركة</label>
+            <input type="text" id="msg-company" class="input" placeholder="اسم الشركة المستهدفة">
+          </div>
+          <div class="form-group">
+            <label for="msg-role">الوظيفة</label>
+            <input type="text" id="msg-role" class="input" placeholder="المسمى الوظيفي">
+          </div>
+          <div class="form-group">
+            <label for="msg-type">نوع الرسالة</label>
+            <select id="msg-type" class="input">
+              <option value="email">إيميل رسمي (Cold Email)</option>
+              <option value="linkedin">رسالة LinkedIn قصيرة</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="msg-cv-context">ملخص سيرتك (يُسحب تلقائياً من الـ CV النشط)</label>
+          <textarea id="msg-cv-context" class="textarea" rows="4" placeholder="ملخص موجز عن خبرتك ومهاراتك..."></textarea>
+        </div>
+        <button class="btn btn-success" id="btn-generate-msg"><i class="fa-solid fa-wand-magic-sparkles"></i> توليد الرسالة بالـ AI</button>
+        <div id="msg-result" class="result-box hidden"></div>
+      </div>
+    </section>
+
+    <!-- ================= الفجوة المهارية ================= -->
+    <section class="view" id="view-gap">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-chart-line"></i> تحليل الفجوة المهنية ومسار التعلّم</h2>
+        <p>قارن مهاراتك بمتطلبات السوق المصري واحصل على خطة تعلّم</p>
+      </header>
+      <div class="card">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="gap-role">الوظيفة المستهدفة</label>
+            <input type="text" id="gap-role" class="input" placeholder="مثال: Data Analyst">
+          </div>
+          <div class="form-group">
+            <label>السوق</label>
+            <input type="text" class="input" value="مصر" disabled>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="gap-cv-text">نص سيرتك الذاتية (يُسحب تلقائياً من الـ CV النشط)</label>
+          <textarea id="gap-cv-text" class="textarea" rows="6" placeholder="الصق نص السيرة أو فعّل نسخة محفوظة..."></textarea>
+        </div>
+        <button class="btn btn-primary" id="btn-analyze-gap"><i class="fa-solid fa-microscope"></i> تحليل الفجوة المهارية</button>
+        <div id="gap-results"></div>
+      </div>
+    </section>
+
+    <!-- ================= مكتبة النماذج ================= -->
+    <section class="view" id="view-templates">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-layer-group"></i> مكتبة النماذج</h2>
+        <p>نسخ الـ CV والرسائل المحفوظة لإعادة الاستخدام</p>
+      </header>
+      <div class="toolbar">
+        <div class="filter-group" id="templates-filter">
+          <button class="toggle-btn active" data-type="">الكل</button>
+          <button class="toggle-btn" data-type="cv">سير ذاتية</button>
+          <button class="toggle-btn" data-type="email">إيميلات</button>
+          <button class="toggle-btn" data-type="linkedin">LinkedIn</button>
+          <button class="toggle-btn" data-type="cover_letter">خطابات تقديم</button>
+        </div>
+        <button class="btn btn-primary" id="btn-new-template"><i class="fa-solid fa-plus"></i> نموذج جديد</button>
+      </div>
+      <div class="templates-grid" id="templates-grid"></div>
+    </section>
+
+    <!-- ================= إدارة الـ APIs ================= -->
+    <section class="view" id="view-settings">
+      <header class="view-header">
+        <h2><i class="fa-solid fa-gear"></i> إدارة الـ APIs واختبارها</h2>
+        <p>كل مفتاح له زر حفظ وزر اختبار مستقل — كل شيء مشفّر محلياً وبدون تعديل كود</p>
+      </header>
+      <div id="api-cards"></div>
+      <div class="card">
+        <h3><i class="fa-solid fa-trash-can"></i> منطقة الخطر</h3>
+        <button class="btn btn-danger-outline" id="btn-clear-all-keys"><i class="fa-solid fa-trash"></i> مسح جميع المفاتيح والإعدادات</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== نافذة طلب التقديم ===== -->
+  <div class="modal-overlay hidden" id="app-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">إضافة طلب تقديم</h3>
+        <button class="icon-btn" id="modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label>الشركة *</label><input type="text" id="app-company" class="input"></div>
+          <div class="form-group"><label>المسمى الوظيفي *</label><input type="text" id="app-job-title" class="input"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>الموقع</label><input type="text" id="app-location" class="input"></div>
+          <div class="form-group">
+            <label>الحالة</label>
+            <select id="app-status" class="input">
+              <option value="sent">مُرسل</option>
+              <option value="interview">مقابلة</option>
+              <option value="pending">معلق</option>
+              <option value="accepted">مقبول</option>
+              <option value="rejected">مرفوض</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>رابط الوظيفة</label><input type="url" id="app-job-url" class="input ltr"></div>
+          <div class="form-group"><label>إيميل التواصل</label><input type="email" id="app-contact-email" class="input ltr"></div>
+        </div>
+        <div class="form-group"><label>ملاحظات</label><textarea id="app-notes" class="textarea" rows="3"></textarea></div>
+        <input type="hidden" id="app-edit-id">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="modal-cancel">إلغاء</button>
+        <button class="btn btn-primary" id="modal-save"><i class="fa-solid fa-check"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== نافذة النموذج ===== -->
+  <div class="modal-overlay hidden" id="template-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>نموذج</h3>
+        <button class="icon-btn" data-close="template-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label>العنوان *</label><input type="text" id="tpl-title" class="input"></div>
+          <div class="form-group">
+            <label>النوع</label>
+            <select id="tpl-type" class="input">
+              <option value="cv">سيرة ذاتية</option>
+              <option value="email">إيميل</option>
+              <option value="linkedin">رسالة LinkedIn</option>
+              <option value="cover_letter">خطاب تقديم</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>المحتوى *</label><textarea id="tpl-content" class="textarea" rows="10"></textarea></div>
+        <input type="hidden" id="tpl-edit-id">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="template-modal">إلغاء</button>
+        <button class="btn btn-primary" id="tpl-save"><i class="fa-solid fa-check"></i> حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- المكتبات -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+  <script src="js/storage.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/apimanager.js"></script>
+  <script src="js/search.js"></script>
+  <script src="js/cv.js"></script>
+  <script src="js/jobs.js"></script>
+  <script src="js/gap.js"></script>
+  <script src="js/bulk.js"></script>
+  <script src="js/tracker.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
